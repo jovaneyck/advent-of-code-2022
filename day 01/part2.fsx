@@ -41,8 +41,12 @@ let solve lines =
     let elfCalories = splitPerElf (List.append lines [ "" ])
     let parseCalories (cals: string list) = cals |> List.map int
     let parsed = elfCalories |> List.map parseCalories
-    let maxSum = parsed |> List.map List.sum |> List.max
-    maxSum
+    let sums = parsed |> List.map List.sum
+
+    sums
+    |> List.sortDescending
+    |> List.take 3
+    |> List.sum
 
 solve input
 

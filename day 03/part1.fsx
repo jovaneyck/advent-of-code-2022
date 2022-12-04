@@ -20,16 +20,14 @@ let parse rucksack =
     let compartments =
         rucksack
         |> Seq.splitInto 2
-        |> Seq.map Seq.toList
+        |> Seq.map set
         |> Seq.toList
 
     let [ compartmentA; compartmentB ] = compartments
     (compartmentA, compartmentB)
 
 let findProblemItem (compartmentA, compartmentB) =
-    [ for item in compartmentA do
-          if compartmentB |> Seq.contains item then
-              yield item ]
+    Set.intersect compartmentA compartmentB
     |> Seq.head
 
 let priority (item: char) =

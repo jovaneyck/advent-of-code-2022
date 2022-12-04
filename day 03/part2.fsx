@@ -16,12 +16,7 @@ let example =
     |> Array.map (fun s -> s.Trim())
     |> List.ofSeq
 
-let findBadge [ first; second; third ] =
-    [ for item in first do
-          if second |> Seq.contains item
-             && third |> Seq.contains item then
-              yield item ]
-    |> Seq.head
+let findBadge group = Set.intersectMany group |> Seq.head
 
 let priority (item: char) =
     if System.Char.IsLower item then
@@ -30,7 +25,7 @@ let priority (item: char) =
         int item - 38
 
 let solve lines =
-    let groups = lines |> List.chunkBySize 3
+    let groups = lines |> List.map set |> List.chunkBySize 3
 
     groups
     |> List.map (findBadge >> priority)

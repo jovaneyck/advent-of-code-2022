@@ -107,15 +107,10 @@ let rec calculateSize tree path =
         s
 
 and sizeOf tree path node =
-    let findPath tree dir =
-        tree
-        |> Map.keys
-        |> Seq.find (fun p -> p |> Seq.head = dir)
-
     match node with
     | File (s, _) -> s
     | Dir (name) ->
-        let path = findPath tree name
+        let path = name :: path
 
         let exists, size = dict.TryGetValue path
 

@@ -11,7 +11,6 @@ type Command =
 
 type FileInfo = int64 * string
 
-
 type Output =
     | Dir of string
     | File of FileInfo
@@ -89,18 +88,10 @@ let processLine state line =
     | Output o -> { state with Tree = insert state.Tree state.CurrentPath o }
     | _ -> state
 
-let dict = new System.Collections.Generic.Dictionary<string list, int64>()
-
 let rec calculateSize tree path =
-    let exists, size = dict.TryGetValue path
-
-    match exists with
-    | true -> size
-    | false ->
-        let atPath = tree |> Map.find path
-        let s = atPath |> List.sumBy (sizeOf tree path)
-        dict.TryAdd(path, s) |> ignore
-        s
+    let atPath = tree |> Map.find path
+    let s = atPath |> List.sumBy (sizeOf tree path)
+    s
 
 and sizeOf tree path node =
     match node with
@@ -108,22 +99,14 @@ and sizeOf tree path node =
     | Dir (name) ->
         let path = name :: path
 
-        let exists, size = dict.TryGetValue path
-
-        match exists with
-        | true -> size
-        | false ->
-            let s = calculateSize tree path
-            dict.TryAdd(path, s) |> ignore
-            s
+        let s = calculateSize tree path
+        s
 
 let solve input =
     let lines = input |> List.map parse
 
     let tree = (lines |> List.fold processLine initial).Tree
     let paths = tree |> Map.keys |> Seq.toList
-
-    dict.Clear()
 
     let sizes =
         paths

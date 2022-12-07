@@ -130,11 +130,22 @@ let solve input =
         |> List.map (fun dir -> dir, dir |> calculateSize tree)
 
     sizes
-    |> List.filter (fun (_, s) -> s <= 100000L)
-    |> Seq.sumBy snd
 
 #time
-//solve input
+let sizes = solve example
+
+let unused =
+    70000000L
+    - (sizes
+       |> List.find (fun (p, _) -> p = [ "/" ])
+       |> snd)
+
+let toFree = 30000000L - unused
+
+let solution =
+    sizes
+    |> List.sortBy snd
+    |> List.find (fun (_, size) -> size >= toFree)
 
 let run () =
     printf "Testing..."
@@ -142,7 +153,6 @@ let run () =
     test <@ parse "$ ls" = Command LS @>
     test <@ parse "dir e" = Output(Dir "e") @>
     test <@ parse "14848514 b.txt" = Output(File(14848514L, "b.txt")) @>
-    test <@ solve example = 95437L @>
     printfn "...done!"
 
 run ()

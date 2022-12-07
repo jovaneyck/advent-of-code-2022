@@ -132,7 +132,7 @@ let solve input =
     sizes
 
 #time
-let sizes = solve example
+let sizes = solve input
 
 let unused =
     70000000L

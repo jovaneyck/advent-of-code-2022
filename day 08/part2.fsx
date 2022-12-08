@@ -39,7 +39,6 @@ let rec grabTrees tree trees =
     match trees with
     | [] -> []
     | t :: ts when t < tree -> t :: (grabTrees tree ts)
-    | t :: _ when t = tree -> [ t ]
     | t :: _ -> [ t ]
 
 let scenicScore neighbours tree =

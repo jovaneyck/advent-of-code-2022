@@ -79,34 +79,20 @@ let newKnotLocation (hx, hy) (tx, ty) =
     | _ -> (tx, ty)
 
 let moveTail state =
-    //YOLO MODE ENGAGED
-    let (h :: t1 :: t2 :: t3 :: t4 :: t5 :: t6 :: t7 :: t8 :: t9 :: []) =
-        state.Rope.Knots
+    let (h :: t) = state.Rope.Knots
 
-    let nT1 = newKnotLocation h t1
-    let nT2 = newKnotLocation nT1 t2
-    let nT3 = newKnotLocation nT2 t3
-    let nT4 = newKnotLocation nT3 t4
-    let nT5 = newKnotLocation nT4 t5
-    let nT6 = newKnotLocation nT5 t6
-    let nT7 = newKnotLocation nT6 t7
-    let nT8 = newKnotLocation nT7 t8
-    let nT9 = newKnotLocation nT8 t9
+    let mvKnots prevs knot =
+        let prev = prevs |> Seq.head
+        let k = newKnotLocation prev knot
+        k :: prevs
+
+    let moved = t |> List.fold mvKnots [ h ]
 
     { state with
-        VisitedTailLocations = state.VisitedTailLocations |> Set.add nT9
-        Rope =
-            { Knots =
-                [ h
-                  nT1
-                  nT2
-                  nT3
-                  nT4
-                  nT5
-                  nT6
-                  nT7
-                  nT8
-                  nT9 ] } }
+        VisitedTailLocations =
+            state.VisitedTailLocations
+            |> Set.add (moved |> Seq.head)
+        Rope = { Knots = moved |> List.rev } }
 
 let moveOne motion state = state |> moveHead motion |> moveTail
 
@@ -117,16 +103,14 @@ let rec applyRec state instruction =
         let step = state |> moveOne instruction.Motion
         applyRec step { instruction with Distance = d - 1 }
 
-let apply state instruction =
-    //printfn "head @ %A; tail @ %A" state.Rope.Head state.Rope.Tail
-    applyRec state instruction
+let apply state instruction = applyRec state instruction
 
 let solve input =
     let instructions = input |> List.map parseInstruction
     let endState = instructions |> List.fold apply initial
     endState.VisitedTailLocations |> Set.count
 
-solve example
+solve input
 
 let run () =
     printf "Testing..."

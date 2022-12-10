@@ -47,14 +47,12 @@ type State =
     { Rope: Rope
       VisitedTailLocations: Set<Location> }
 
-let initialRope = { Knots = (0, 0) |> List.replicate 10 }
-
 let initial =
-    { Rope = initialRope
+    { Rope = { Knots = (0, 0) |> List.replicate 10 }
       VisitedTailLocations = Set.empty }
 
 let moveHead motion state =
-    let (x, y) = state.Rope.Knots[0]
+    let ((x, y) :: tails) = state.Rope.Knots
 
     let newHead =
         match motion with
@@ -63,42 +61,22 @@ let moveHead motion state =
         | R -> (x + 1, y)
         | L -> (x - 1, y)
 
-    let newKnots = newHead :: (state.Rope.Knots |> List.skip 1)
-    { state with Rope = { state.Rope with Knots = newKnots } }
+    { state with Rope = { state.Rope with Knots = newHead :: tails } }
 
 let newKnotLocation (hx, hy) (tx, ty) =
     let distance x y = abs (x - y)
 
-    //on top
-    if distance hx tx = 0 && distance hy ty = 0 then
-        (tx, ty)
-    //directly up
-    elif distance hx tx = 0 && hy = ty + 1 then
-        (tx, ty)
-    elif distance hx tx = 0 && hy = ty + 2 then
-        (tx, ty + 1)
-    //2 down
-    elif hx = tx && hy = ty - 1 then
-        (tx, ty)
-    elif hx = tx && hy = ty - 2 then
-        (tx, ty - 1)
-    //2 right
-    elif hy = ty && hx = tx + 1 then
-        (tx, ty)
-    elif hy = ty && hx = tx + 2 then
-        (tx + 1, ty)
-    //2 left
-    elif hy = ty && hx = tx - 1 then
-        (tx, ty)
-    elif hy = ty && hx = tx - 2 then
-        (tx - 1, ty)
-    //diagonally touching
-    elif distance hx tx = 1 && distance hy ty = 1 then
-        (tx, ty)
-    else
+    match distance hx tx, distance hy ty with
+    | 0, 2 when hy = ty + 2 -> (tx, ty + 1)
+    | 0, 2 when hy = ty - 2 -> (tx, ty - 1)
+    | 2, 0 when hx = tx + 2 -> (tx + 1, ty)
+    | 2, 0 when hx = tx - 2 -> (tx - 1, ty)
+    | 1, 1 -> (tx, ty)
+    | n, m when n >= 1 && m >= 1 ->
         let ntx = if hx > tx then tx + 1 else tx - 1
         let nty = if hy > ty then ty + 1 else ty - 1
         (ntx, nty)
+    | _ -> (tx, ty)
 
 let moveTail state =
     //YOLO MODE ENGAGED
@@ -143,9 +121,12 @@ let apply state instruction =
     //printfn "head @ %A; tail @ %A" state.Rope.Head state.Rope.Tail
     applyRec state instruction
 
-let instructions = input |> List.map parseInstruction
-let endState = instructions |> List.fold apply initial
-endState.VisitedTailLocations |> Set.count
+let solve input =
+    let instructions = input |> List.map parseInstruction
+    let endState = instructions |> List.fold apply initial
+    endState.VisitedTailLocations |> Set.count
+
+solve example
 
 let run () =
     printf "Testing..."
@@ -158,7 +139,8 @@ let run () =
     test <@ (1, 2) = newKnotLocation (2, 3) (1, 2) @>
     //diagonal jump
     test <@ (2, 2) = newKnotLocation (2, 3) (1, 1) @>
-
+    test <@ solve example = 1 @>
+    test <@ solve input = 2427 @>
     printfn "...done!"
 
 run ()

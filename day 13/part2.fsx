@@ -1,7 +1,5 @@
-#r "nuget: Unquote"
 #r "nuget: FParsec"
 
-open Swensen.Unquote
 open FParsec
 
 let input =
@@ -62,17 +60,6 @@ let parsePacket packet =
     | Success (res, _, _) -> res
     | _ -> failwithf "%A" result
 
-let parse (packets: string []) =
-    packets
-    |> Array.map (fun ps ->
-        let [ left; right ] =
-            ps.Split("\n")
-            |> Array.map parsePacket
-            |> Array.toList
-
-        (left, right))
-    |> Array.toList
-
 let rec sorted left right =
     match left, right with
     | Int l, Int b when l < b -> true |> Some
@@ -105,10 +92,3 @@ let s = full |> List.sortWith ssorted
 let idx2 = 1 + (s |> List.findIndex ((=) divTwo))
 let idx6 = 1 + (s |> List.findIndex ((=) divSix))
 let decoderKey = idx2 * idx6
-
-let run () =
-    printf "Testing..."
-    //test <@ solve example = 13 @>
-    printfn "...done!"
-
-run ()

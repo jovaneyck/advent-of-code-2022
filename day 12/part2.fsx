@@ -57,11 +57,11 @@ let coordsIn grid =
     [ for y in [ 0 .. (grid |> Array2D.length1) - 1 ] do
           for x in [ 0 .. (grid |> Array2D.length2) - 1 ] -> (x, y) ]
 
-let findLocationOf character grid =
+let findLocationsOf character grid =
     grid
     |> Array2D.mapi (fun y x el -> (x, y, el))
     |> Seq.cast<int * int * char>
-    |> Seq.pick (fun (x, y, el) ->
+    |> Seq.choose (fun (x, y, el) ->
         if el = character then
             Some(x, y)
         else
@@ -93,28 +93,31 @@ let canClimb (currentHeight: char) (height: char) = (1 + int currentHeight) >= (
 
 ///Immutable version of Dijkstra's shortest path algorithm
 ///https://en.wikipedia.org/wiki/Dijkstra%27s_algorithm#Pseudocode
-let rec dijkstra (pq: DPQ.State<Location>) grid =
+let rec dijkstra (pq: DPQ.State<Location>) grid endings =
     match pq |> DPQ.tryUncons with
-    | None -> pq.Distances
+    | None -> 0
     | Some ((dist, coord), pqrest) ->
-        let neighbs = neighbourLocations coord grid
+        if endings |> Set.contains coord then
+            dist
+        else
+            let neighbs = neighbourLocations coord grid
 
-        let unvisitedNeighbourDistances =
-            neighbs
-            |> List.filter (fun n -> canClimb (at grid coord) (at grid n))
-            |> List.filter (fun n -> pqrest |> DPQ.visited n |> not)
-            |> List.map (fun n -> (dist + 1, n))
+            let unvisitedNeighbourDistances =
+                neighbs
+                |> List.filter (fun n -> canClimb (at grid n) (at grid coord))
+                |> List.filter (fun n -> pqrest |> DPQ.visited n |> not)
+                |> List.map (fun n -> (dist + 1, n))
 
-        let next =
-            pqrest
-            |> DPQ.updateDistances unvisitedNeighbourDistances
+            let next =
+                pqrest
+                |> DPQ.updateDistances unvisitedNeighbourDistances
 
-        dijkstra next grid
+            dijkstra next grid endings
 
 let solve input =
     let rawgrid: Grid = input |> array2D
-    let start = rawgrid |> findLocationOf 'S'
-    let ending = rawgrid |> findLocationOf 'E'
+    let start = rawgrid |> findLocationsOf 'S' |> Seq.last
+    let ending = rawgrid |> findLocationsOf 'E' |> Seq.last
 
     let grid: Grid =
         rawgrid
@@ -128,15 +131,17 @@ let solve input =
         grid
         |> coordsIn
         |> List.map (fun c ->
-            if c = start then
+            if c = ending then
                 (0, c)
             else
                 (System.Int32.MaxValue, c))
         |> DPQ.ofSeq
 
-    let result = dijkstra dpq grid
-    let distanceToEnd = result |> Map.find ending
-    distanceToEnd
+    let aLocations = grid |> findLocationsOf 'a' |> Set.ofSeq
+    let result = dijkstra dpq grid aLocations
+    result
+
+
 
 let runT () =
     printf "Testing..."
@@ -183,9 +188,10 @@ let runT () =
     test <@ canClimb 'b' 'a' @>
     test <@ canClimb 'a' 'c' |> not @>
 
-    test <@ solve example = 31 @>
+    test <@ solve example = 29 @>
     printfn "...done!"
 
 runT ()
 
+#time //Real: 00:00:00.044, CPU: 00:00:00.031, GC gen0: 9, gen1: 0, gen2: 0
 solve input

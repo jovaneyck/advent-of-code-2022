@@ -1,6 +1,8 @@
+#r "nuget: Unquote"
 #r "nuget: FParsec"
 
 open FParsec
+open Swensen.Unquote
 
 let input =
     $"""{__SOURCE_DIRECTORY__}\input.txt"""
@@ -51,10 +53,13 @@ let listParser =
     .>> (pchar ']')
     |>> List
 
-packetParserRef.Value <- (listParser <|> intParser) //TODO: eof
+packetParserRef.Value <- (listParser <|> intParser)
+let parser = packetParser .>> eof
+
+let parse packet = run parser packet
 
 let parsePacket packet =
-    let result = run packetParser packet
+    let result = parse packet
 
     match result with
     | Success (res, _, _) -> res
@@ -86,9 +91,26 @@ let ssorted left right =
     | Some false -> 1
     | None -> failwithf "Could not compare %A with %A" left right
 
-let parsed = input |> List.map parsePacket
-let full = List.append dividers parsed
-let s = full |> List.sortWith ssorted
-let idx2 = 1 + (s |> List.findIndex ((=) divTwo))
-let idx6 = 1 + (s |> List.findIndex ((=) divSix))
-let decoderKey = idx2 * idx6
+let solve input =
+    let parsed = input |> List.map parsePacket
+    let full = List.append dividers parsed
+    let s = full |> List.sortWith ssorted
+    let idx2 = 1 + (s |> List.findIndex ((=) divTwo))
+    let idx6 = 1 + (s |> List.findIndex ((=) divSix))
+    let decoderKey = idx2 * idx6
+    decoderKey
+
+test
+    <@ let (ParserResult.Success (r, _, _)) = parse "[[1],[2,3,4]]"
+
+       r = List [ List [ Int 1 ]
+                  List [ Int 2; Int 3; Int 4 ] ] @>
+
+test
+    <@ let (ParserResult.Failure (e, _, _)) = parse "[[1],[2,3,4]]   "
+
+       e.Contains("Expecting: end of input") @>
+
+test <@ solve example = 140 @>
+
+solve input

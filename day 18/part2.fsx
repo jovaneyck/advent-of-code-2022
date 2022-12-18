@@ -104,27 +104,7 @@ let parsedCoords = input |> List.map parse
 let droplet = buildDroplet parsedCoords
 let outside = floodfill droplet [ (0, 0, 0) ] Set.empty
 
-parsedCoords
-|> List.map (countOutsideSides outside)
-|> List.sum
-
-let touchingDroplet =
-    outside
-    |> Seq.filter (fun c ->
-        neighbours c
-        |> Seq.exists (fun n -> exists droplet n))
-
-let surface =
-    touchingDroplet
-    |> Seq.sumBy (fun c ->
-        6
-        - (neighbours c
-           |> Seq.filter (exists droplet)
-           |> Seq.length))
-
-let run () =
-    printf "Testing..."
-    test <@ 1 + 1 = 2 @>
-    printfn "...done!"
-
-run ()
+let part2 =
+    parsedCoords
+    |> List.map (countOutsideSides outside)
+    |> List.sum

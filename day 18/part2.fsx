@@ -98,9 +98,9 @@ let rec floodfill droplet queue visited =
 
 let countOutsideSides outside coord =
     let ns = coord |> neighbours
-    Set.difference (set ns) outside |> Set.count
+    Set.intersect (set ns) outside |> Set.count
 
-let parsedCoords = example |> List.map parse
+let parsedCoords = input |> List.map parse
 let droplet = buildDroplet parsedCoords
 let outside = floodfill droplet [ (0, 0, 0) ] Set.empty
 

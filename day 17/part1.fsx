@@ -1,3 +1,4 @@
+//Where I'm at: I think we're functionally there, but it's slowwwwww and I don't expect it to. Tail recursion perhaps?
 #r "nuget: Unquote"
 open Swensen.Unquote
 
@@ -82,8 +83,20 @@ let emptyChamber width : Chamber =
 let top chamber =
     1 + (chamber.Blocked |> Seq.map snd |> Seq.max)
 
+let topBlockers n blocked =
+    blocked
+    |> Seq.groupBy fst
+    |> Seq.collect (fun (_, g) ->
+        g
+        |> Seq.sortByDescending snd
+        |> Seq.take (min n (g |> Seq.length)))
+
 let add (rock: Rock) (chamber: Chamber) =
-    { chamber with Blocked = Set.union chamber.Blocked (rock |> absoluteCoords) }
+    printfn "Chamber consists of %A blockers" chamber.Blocked.Count
+    let newBlocked = Set.union chamber.Blocked (rock |> absoluteCoords)
+    let b = topBlockers 3 newBlocked |> set
+
+    { chamber with Blocked = b }
 
 let printChamber (chamber: Chamber) = print chamber.Blocked
 
@@ -150,7 +163,12 @@ let rec falldown jets chamber rock =
     else
         falldown js chamber dropped
 
+let mutable x = 0
+
 let fall (jets: Jet seq, chamber: Chamber) (pattern: Pattern) : (Jet seq * Chamber) =
+    x <- x + 1
+    printfn "Rock %d" x
+
     let rock: Rock =
         { Location = (2, 3 + (chamber |> top))
           Pattern = pattern }
@@ -162,6 +180,7 @@ let jets = example |> Seq.map parse |> repeat
 let rocks = patterns |> repeat |> Seq.take 2022
 let (_, c) = Seq.fold fall (jets, emptyChamber 7) rocks
 c |> printChamber
+let result = c |> top
 
 let run () =
     printf "Testing..."

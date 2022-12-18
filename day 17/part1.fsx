@@ -92,11 +92,10 @@ let topBlockers n blocked =
         |> Seq.take (min n (g |> Seq.length)))
 
 let add (rock: Rock) (chamber: Chamber) =
-    printfn "Chamber consists of %A blockers" chamber.Blocked.Count
     let newBlocked = Set.union chamber.Blocked (rock |> absoluteCoords)
-    let b = topBlockers 3 newBlocked |> set
+    //let b = topBlockers 3 newBlocked |> set
 
-    { chamber with Blocked = b }
+    { chamber with Blocked = newBlocked }
 
 let printChamber (chamber: Chamber) = print chamber.Blocked
 
@@ -177,7 +176,7 @@ let fall (jets: Jet seq, chamber: Chamber) (pattern: Pattern) : (Jet seq * Chamb
     js, chamber |> add dropped
 
 let jets = example |> Seq.map parse |> repeat
-let rocks = patterns |> repeat |> Seq.take 2022
+let rocks = patterns |> repeat |> Seq.take 10 // 2022
 let (_, c) = Seq.fold fall (jets, emptyChamber 7) rocks
 c |> printChamber
 let result = c |> top

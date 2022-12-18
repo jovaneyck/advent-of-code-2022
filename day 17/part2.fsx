@@ -46,7 +46,7 @@ let print (pattern: Pattern) =
 
     printfn ""
 
-let patterns: Pattern seq =
+let patterns: Pattern list =
     [ pattern [ (0, 0)
                 (1, 0)
                 (2, 0)
@@ -72,9 +72,6 @@ let patterns: Pattern seq =
 
 patterns |> Seq.iter print
 
-let repeat s =
-    Seq.initInfinite (fun _ -> s) |> Seq.collect id
-
 ///The camber contains all stable rocks
 type Chamber = { Width: int; Blocked: Set<Coord> }
 
@@ -85,17 +82,8 @@ let emptyChamber width : Chamber =
 let top chamber =
     1 + (chamber.Blocked |> Seq.map snd |> Seq.max)
 
-let topBlockers n blocked =
-    blocked
-    |> Seq.groupBy fst
-    |> Seq.collect (fun (_, g) ->
-        g
-        |> Seq.sortByDescending snd
-        |> Seq.take (min n (g |> Seq.length)))
-
 let add (rock: Rock) (chamber: Chamber) =
     let newBlocked = Set.union chamber.Blocked (rock |> absoluteCoords)
-    //let b = topBlockers 3 newBlocked |> set
 
     { chamber with Blocked = newBlocked }
 
@@ -114,9 +102,13 @@ let parse =
 
 let input = System.IO.File.ReadAllText $"""{__SOURCE_DIRECTORY__}\input.txt"""
 let example = """>>><<><>><<<>><>>><<<>>><<<><<<>><>><<>>"""
-let loopingJets = input |> Seq.map parse |> Seq.toArray
-let max = loopingJets |> Seq.length
-let jetAt idx = loopingJets[idx % max]
+
+let jets = input |> Seq.map parse |> Seq.toArray
+let maxJet = jets |> Seq.length
+let jetAt idx = jets[idx % maxJet]
+
+let maxPattern = patterns |> Seq.length
+let patternAt rockNb = patterns[(rockNb - 1) % maxPattern]
 
 let apply (jet: Jet) (rock: Rock) : Rock =
     let (x, y) = rock.Location
@@ -173,10 +165,11 @@ let rec falldown jetIndex chamber rock =
 
 let mutable x = 0
 
-let fall (jetIndex: int, chamber: Chamber) (pattern: Pattern) : (int * Chamber) =
+let fall (jetIndex: int, chamber: Chamber) (rockNumber: int) : (int * Chamber) =
     x <- x + 1
 
     printfn "Rock %d" x
+    let pattern = patternAt rockNumber
 
     let rock: Rock =
         { Location = (2, 3 + (chamber |> top))
@@ -186,8 +179,7 @@ let fall (jetIndex: int, chamber: Chamber) (pattern: Pattern) : (int * Chamber) 
     let res = js, chamber |> add dropped
     res
 
-let rocks = patterns |> repeat |> Seq.take 2022
-let (_, c) = Seq.fold fall (0, emptyChamber 7) rocks
+let (_, c) = Seq.fold fall (0, emptyChamber 7) [ 1..2022 ]
 c |> printChamber
 let result = c |> top
 

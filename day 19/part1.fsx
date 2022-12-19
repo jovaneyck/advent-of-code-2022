@@ -3,8 +3,8 @@ open Swensen.Unquote
 
 //Pruned BFS with memoization
 //Pruning heuristics (taken from hyper-neutrino YT)
-//1. spend rates: if you can only use x resY/minute, it does not make sense to have more than x robotY
-//2. equivalent resource pools: if there are 10 minutes left and you have an ore spend rate of 4, all states with ore resources >= 4 * 10 = 40 are functionally equivalent
+//1. spend rates: if you can only use x resY/minute for the most expensive robot, it does not make sense to have more than x of robotY
+//2. equivalent resource pools: if there are 10 minutes left and you have a maximum ore spend rate of 4 per minute, all states with ore resources >= 4 * 10 = 40 are functionally equivalent
 // Geode pools are not equivalent because we're trying to max that :)
 
 let input =
@@ -111,9 +111,9 @@ let useful (constraints: Constraints) (state: State) (RobotType rt) =
 
 let possibleActions (constraints: Constraints) (blueprint: Blueprint) state =
     blueprint.Costs
+    |> Map.filter (fun rt costs -> allAvailable costs state)
+    |> Map.filter (fun rt costs -> useful constraints state rt)
     |> Map.toList
-    |> List.filter (fun (rt, costs) -> allAvailable costs state)
-    |> List.filter (fun (rt, costs) -> useful constraints state rt)
     |> List.map (fst >> MakeRobot)
     |> List.append [ DoNothing ] //Not building a robot is always a valid action
 
@@ -127,8 +127,8 @@ let addRobot rt state =
     { state with Robots = next }
 
 let makeRobot (blueprint: Blueprint) (state: State) (RobotType r) =
-    let c = blueprint.Costs |> Map.find (RobotType r)
-    let consumed = c |> List.fold (fun s t -> consume s t) state
+    let costs = blueprint.Costs |> Map.find (RobotType r)
+    let consumed = costs |> List.fold consume state
     let added = consumed |> addRobot (RobotType r)
     added
 
@@ -138,10 +138,12 @@ let perform blueprint state action =
     | MakeRobot r -> makeRobot blueprint state r
 
 let tick constraints blueprint state =
+    let collected = collectResources state
+
     state
     |> possibleActions constraints blueprint
     |> List.map (perform blueprint state)
-    |> List.map (addResources (collectResources state))
+    |> List.map (addResources collected)
 
 ///Calculates what the maximum spend is for each resource in a single tick.
 let spendRates (blueprint: Blueprint) =
@@ -153,16 +155,6 @@ let spendRates (blueprint: Blueprint) =
     |> Map.ofList
 
 let buildConstraints blueprint = { SpendRates = spendRates blueprint }
-
-let pruneSpendRate state (rt, Cost c) =
-    let robots = state.Robots |> Map.find (RobotType rt)
-
-    if robots <= c then
-        state
-    else
-        //printfn "PRUNING %A %A in %A" rt c state
-        failwith "BUG: we should not be building the robot instead of releasing it and having resource consumption!"
-        { state with Robots = state.Robots |> Map.add (RobotType rt) c }
 
 let pruneResource timeleft state rt (Cost c) =
     let capped =
@@ -190,23 +182,15 @@ let steps () max blueprint state =
             Set.singleton state
         else
             match memo.TryGetValue state with
-            | true, m ->
-                //printfn "CACHE HIT for %A, i.e: %A" state m
-                m
+            | true, m -> m
             | false, _ ->
-                //printfn "CACHE MISS for %A" state
-                let next = tick constraints blueprint state
-                //printfn "Next possible states: %A" next
-                let pruned =
-                    next
-                    |> Set.ofList
-                    |> Set.map (prune (max - minute) constraints)
-                //printfn "Pruned next states: %A" pruned
-
                 let results =
-                    pruned
+                    state
+                    |> tick constraints blueprint
+                    |> Set.ofList
                     |> Set.map (memoSteps (minute + 1))
                     |> Set.unionMany
+                    |> Set.map (prune (max - minute) constraints)
 
                 memo.TryAdd(state, results) |> ignore
                 results
@@ -226,7 +210,7 @@ let countGeodes (state: State) =
 
 let blueprints = example |> List.map parse
 #time
-let states = steps () 24 blueprints[1] init
+let states = steps () 24 blueprints[0] init
 let w = winningFuture states
 countGeodes w
 
